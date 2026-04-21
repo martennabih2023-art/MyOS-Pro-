@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyOS Pro - مع Snake Game</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Courier New', monospace; 
+            background: #000; color: #00ff00; 
+            height: 100vh; overflow: hidden;
+        }
+        
+        /* Boot Screen */
+        .boot-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 1000;
+        }
+        .boot-logo { font-size: 48px; margin-bottom: 20px; }
+        .boot-progress { 
+            width: 400px; height: 25px; background: #333; 
+            border-radius: 15px; overflow: hidden; 
+        }
+        .boot-bar { 
+            height: 100%; background: linear-gradient(90deg, #00ff00, #00aa00); 
+            width: 0%; transition: width 0.4s; 
+        }
+        
+        /* Desktop */
+        .desktop {
+            height: 100vh; background: linear-gradient(135deg, #001122, #003366);
+            position: relative; padding: 40px; display: none;
+        }
+        .icon {
+            width: 120px; height: 120px; background: rgba(255,255,255,0.15);
+            border-radius: 20px; margin: 30px; display: inline-flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.4s; backdrop-filter: blur(20px);
+            border: 3px solid rgba(255,255,255,0.2);
+        }
+        .icon:hover { 
+            background: rgba(0,255,0,0.4); transform: translateY(-15px) scale(1.1);
+            border-color: #00ff00; box-shadow: 0 25px 50px rgba(0,255,0,0.4);
+        }
+        
+        /* Terminal */
+        .terminal {
+            position: fixed; top: 60px; left: 60px; right: 60px; bottom: 90px;
+            background: #000; border-radius: 15px; box-shadow: 0 30px 80px rgba(0,0,0,0.9);
+            display: none; flex-direction: column; z-index: 100;
+        }
+        .terminal.active { display: flex; }
+        .term-header {
+            background: linear-gradient(90deg, #222, #444); color: #fff; 
+            padding: 15px 25px; display: flex; justify-content: space-between;
+            align-items: center; border-radius: 15px 15px 0 0; font-size: 16px;
+            font-weight: bold;
+        }
+        .close-btn { 
+            cursor: pointer; padding: 8px 15px; border-radius: 50%; 
+            transition: 0.3s; background: #666; 
+        }
+        .close-btn:hover { background: #ff4444; }
+        
+        #terminal { flex: 1; padding: 25px; overflow-y: auto; font-size: 17px; line-height: 1.6; }
+        .prompt { color: #00ff00; font-weight: bold; }
+        .input-line { display: flex; align-items: center; padding: 0 25px 25px; border-top: 2px solid #333; }
+        #cmd-input {
+            background: transparent; border: none; color: #00ff00; 
+            font-family: inherit; font-size: 17px; outline: none; flex: 1;
+        }
+        
+        /* Taskbar */
+        .taskbar {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+            background: rgba(0,0,0,0.95); display: flex; align-items: center;
+            padding: 0 25px; backdrop-filter: blur(25px); border-top: 2px solid #333;
+        }
+        .start-btn {
+            background: linear-gradient(45deg, #00ff00, #00cc00); color: #000;
+            border: none; padding: 15px 25px; border-radius: 30px; cursor: pointer;
+            font-weight: bold; font-size: 16px; margin-right: 20px; transition: 0.4s;
+        }
+        .start-btn:hover { 
+            transform: scale(1.08); box-shadow: 0 8px 25px rgba(0,255,0,0.6); 
+        }
+        .time { margin-left: auto; color: #fff; font-size: 20px; font-weight: bold; }
+        
+        @keyframes glow { 0%,100%{text-shadow:0 0 20px #00ff00;} 50%{text-shadow:0 0 50px #00ff00;} }
+        .glow { animation: glow 2s infinite; }
+    </style>
+</head>
+<body>
+    <!-- Boot Screen -->
+    <div class="boot-screen" id="bootScreen">
+        <div class="boot-logo glow">🐍 MyOS Pro + Snake Game</div>
+        <div class="boot-progress">
+            <div class="boot-bar" id="bootBar"></div>
+        </div>
+        <div style="margin-top:35px;font-size:16px;">Loading Game Engine... 0%</div>
+    </div>
+
+    <!-- Desktop -->
+    <div class="desktop" id="desktop">
+        <div class="icon" onclick="openTerminal()">
+            <div style="font-size:55px;">⚡</div>
+            <div>Terminal</div>
+        </div>
+        <div class="icon" onclick="playSnake()">
+            <div style="font-size:55px;">🐍</div>
+            <div>Snake Game</div>
+        </div>
+        <div class="icon" onclick="showGames()">
+            <div style="font-size:55px;">🎮</div>
+            <div>Games</div>
+        </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="terminal" id="terminalApp">
+        <div class="term-header">
+            <span>🐍 MyOS Terminal v2.1</span>
+            <div class="close-btn" onclick="closeTerminal()">⛶</div>
+        </div>
+        <div id="terminal"></div>
+        <div class="input-line">
+            <span class="prompt" id="prompt">root@myos:~# </span>
+            <input type="text" id="cmd-input" autocomplete="off" autofocus>
+        </div>
+    </div>
+
+    <!-- Taskbar -->
+    <div class="taskbar">
+        <button class="start-btn" onclick="toggleDesktop()">🚀 Start MyOS</button>
+        <div class="time" id="time"></div>
+    </div>
+
+    <script>
+        // 🔥 الكوماندات مع Snake Game
+        const commands = {
+            'help': `🐍 MyOS Pro Commands:
+help     📋 هذه القائمة
+ls       📁 الملفات
+clear    🧹 مسح الشاشة
+date     📅 التاريخ
+disk     💾 الهارد ديسك
+whoami   👤 مين أنا
+ver      🏷️ إصدار النظام
+games    🎮 قائمة الألعاب
+snake    🐍 Snake Game (https://snake-game.io/)
+flappy   🐦 Flappy Bird
+dino     🏃 Chrome Dino
+2048     🔢 2048 Game
+reboot   🔄 إعادة تشغيل
+shutdown 🔌 إطفاء`,
+
+            'ls': `🐍 games/
+📁 files/
+📄 docs/
+⚙️  system/
+🚀 kernel.js`,
+
+            'clear': () => { document.getElementById('terminal').innerHTML = ''; },
+            'date': () => new Date().toLocaleString('ar-EG'),
+            'disk': `💾 Hard Disk: 120GB
+✅ Free: 100GB (83%)
+📊 Files: 300+`,
+
+            'whoami': '👤 root (Super Admin)',
+            'ver': '🐍 MyOS Pro v2.1\n🎮 Snake Edition\n📅 2024',
+
+            'games': `🎮 الألعاب المتاحة:
+🐍 snake    → https://snake-game.io/
+🐦 flappy   → Flappy Bird
+🏃 dino     → Chrome Dino
+🔢 2048     → 2048 Game`,
+
+            // 🔥 SNAKE GAME من الرابط بتاعك
+            'snake': () => {
+                printToTerminal('🐍 Opening Snake Game...', 'success');
+                printToTerminal('لعبة Snake من https://snake-game.io/ فتحت في تب جديد!', 'highlight');
+                window.open('https://snake-game.io/', '_blank', 'width=900,height=700,scrollbars=no');
+            },
+
+            'flappy': () => window.open('https://flappybird.io/', '_blank'),
+            'dino': () => window.open('chrome://dino/', '_blank'),
+            '2048': () => window.open('https://play2048.co/', '_blank'),
+
+            'reboot': () => location.reload(),
+            'shutdown': () => {
+                printToTerminal('🔌 Shutting down MyOS...', 'boot');
+                let dots = '';
+                const interval = setInterval(() => {
+                    printToTerminal(`Shutting down${dots}`, 'boot');
+                    dots += '.';
+                    if (dots.length > 3) location.reload();
+                }, 800);
+            }
+        };
+
+        // Boot Animation
+        function bootOS() {
+            const bar = document.getElementById('bootBar');
+            const text = document.querySelector('.boot-screen div:last-child');
+            let progress = 0;
+            
+            const steps = ['BIOS...', 'Kernel...', 'Snake Engine...', 'Ready!'];
+            const interval = setInterval(() => {
+                progress += 12;
+                bar.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.getElementById('bootScreen').style.display = 'none';
+                        document.getElementById('desktop').style.display = 'block';
+                    }, 1500);
+                } else {
+                    text.textContent = `${steps[Math.floor(progress/25)]} ${progress}%`;
+                }
+            }, 300);
+        }
+
+        // Terminal Functions
+        function printToTerminal(text, type = '') {
+            const term = document.getElementById('terminal');
+            const div = document.createElement('div');
+            div.textContent = text;
+            if (type === 'success') div.style.color = '#00ff00';
+            if (type === 'error') div.style.color = '#ff4444';
+            if (type === 'highlight') div.style.color = '#ffaa00';
+            if (type === 'boot') div.style.color = '#00aaff';
+            term.appendChild(div);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        // Terminal Input
+        document.getElementById('cmd-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const cmd = this.value.trim().toLowerCase();
+                printToTerminal(`${document.getElementById('prompt').textContent}${cmd}`);
+                
+                if (commands[cmd]) {
+                    const result = commands[cmd];
+                    if (typeof result === 'function') result();
+                    else printToTerminal(result, 'highlight');
+                } else {
+                    printToTerminal(`❌ '${cmd}' مش موجود!\n💡 اكتب 'help'`, 'error');
+                }
+                this.value = '';
+            }
+        });
+
+        // App Functions
+        function openTerminal() {
+            document.getElementById('terminalApp').classList.add('active');
+            setTimeout(() => document.getElementById('cmd-input').focus(), 200);
+        }
+
+        function closeTerminal() {
+            document.getElementById('terminalApp').classList.remove('active');
+        }
+
+        function playSnake() {
+            commands.snake();
+            openTerminal();
+        }
+
+        function showGames() {
+            printToTerminal(commands.games, 'highlight');
+            openTerminal();
+        }
+
+        function toggleDesktop() {
+            const desktop = document.getElementById('desktop');
+            desktop.style.display = desktop.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Clock
+        function updateClock() {
+            document.getElementById('time').textContent = 
+                new Date().toLocaleTimeString('ar-EG');
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        // Drag Window
+        let dragging = false, dragOffset = {};
+        document.querySelector('.term-header').addEventListener('mousedown', (e) => {
+            dragging = true;
+            const rect = e.currentTarget.getBoundingClientRect();
+            dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (dragging && document.getElementById('terminalApp').classList.contains('active')) {
+                const term = document.getElementById('terminalApp');
+                term.style.position = 'fixed';
+                term.style.left = (e.clientX - dragOffset.x) + 'px';
+                term.style.top = (e.clientY - dragOffset.y) + 'px';
+                term.style.width = '700px';
+                term.style.height = '500px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => dragging = false);
+
+        window.onload = bootOS;
+    </script>
+</body>
+</html>
